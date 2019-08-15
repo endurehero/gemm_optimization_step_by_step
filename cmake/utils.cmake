@@ -15,8 +15,16 @@ function(fetch_files_with_suffix search_dir suffix outputs)
     endif()
 endfunction()
 
-function(fetch_files_with_suffix_recursively search_dir sufffix outputs)
+function(fetch_files_with_suffix_recursively search_dir suffix outputs)
+    set(dir "")
+    file(GLOB_RECURSE dir RELATIVE ${search_dir} "*.${suffix}")
+
     set(abs_dir "")
-    file(GLOB_RECURSE ${abs_dir} ${search_dir} "*.${suffix}")
-    set(${outputs} ${${outputs}} ${abs_dir})
+    foreach(d ${dir})
+        set(abs_dir ${abs_dir} ${search_dir}/${d})
+    endforeach()
+    
+    message(STATUS "outputs: ${abs_dir}")
+
+    set(${outputs} ${${outputs}} ${abs_dir} PARENT_SCOPE)
 endfunction()

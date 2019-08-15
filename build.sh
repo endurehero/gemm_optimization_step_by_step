@@ -7,5 +7,11 @@ fi
 cd ./build
 rm -rf *
 
-cmake ..
+cmake \
+    -DUSE_GPU=NO \
+    -DUSE_RAW=NO \
+    -DUSE_REDUCE_INDEX_OVERHEAD=NO \
+    -DUSE_COL_UNROLL=NO \
+    -DUSE_SCALAR_REGISTER=YES \
+    ..
 make

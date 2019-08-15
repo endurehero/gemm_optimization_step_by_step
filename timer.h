@@ -2,7 +2,10 @@
 #define TIMER_H
 
 #include <chrono>
+
+#ifdef USE_GPU
 #include <cuda_runtime.h>
+#endif
 
 using namespace std;
 using namespace chrono;
@@ -42,6 +45,7 @@ private:
 
 };
 
+#ifdef USE_GPU
 template<>
 class Timer<NV>{
 public:
@@ -79,5 +83,5 @@ private:
     cudaEvent_t _start, _end;
 
 };
-
+#endif
 #endif
