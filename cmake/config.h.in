@@ -1,0 +1,9 @@
+#ifndef GEMM_CONFIGURE_GUARD_H
+#define GEMM_CONFIGURE_GUARD_H
+
+#cmakedefine USE_RAW
+#cmakedefine USE_REDUCE_INDEX_OVERHEAD
+#cmakedefine USE_COL_UNROLL
+#cmakedefine USE_SCALAR_REGISTER
+
+#endif
