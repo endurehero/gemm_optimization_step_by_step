@@ -33,10 +33,6 @@ public:
     float elapsed(){
         return duration_cast<milliseconds>(_end - _start).count();
     }
-
-    long long gflops(long long ins_num, float t){
-        return static_cast<long long>(ins_num / t / 1000000);
-    }
     
 
 private:
@@ -73,11 +69,6 @@ public:
         cudaEventElapsedTime(&t, _start, _end);
         return t;
     }
-
-    long long gflops(long long ins_num, float t){
-        return static_cast<long long>(ins_num / t / 1000000);
-    }
-    
 
 private:
     cudaEvent_t _start, _end;

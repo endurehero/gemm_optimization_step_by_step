@@ -26,3 +26,8 @@ void fillRandom(float* m, int size){
         m[i] = u(e);
     }
 }
+
+
+float gflops(long long ins_num, float t){
+        return static_cast<float>(static_cast<float>(ins_num) / t / 1000000);
+}

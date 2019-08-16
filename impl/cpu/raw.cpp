@@ -11,7 +11,7 @@ void gemm_cpu(int m, int n, int k, float* a, int lda, float* b, int ldb, float* 
         for(int row = 0; row < m; ++row){
             float tmp = 0.0;
             for(int p = 0; p < k; ++p){
-                tmp += a[cord(row, k, _lda)] * b[cord(k, col, ldb)];
+                tmp += a[cord(row, p, lda)] * b[cord(p, col, ldb)];
             }
             c[cord(row, col, ldc)] = alpha * tmp + beta * c[cord(row, col, ldc)];
         }

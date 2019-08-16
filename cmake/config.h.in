@@ -1,7 +1,7 @@
 #ifndef GEMM_CONFIGURE_GUARD_H
 #define GEMM_CONFIGURE_GUARD_H
 
-
+#cmakedefine BUILD_SHARED
 #cmakedefine USE_GPU
 
 #cmakedefine USE_RAW
@@ -9,5 +9,9 @@
 #cmakedefine USE_COL_UNROLL
 #cmakedefine USE_SCALAR_REGISTER
 #cmakedefine USE_BLOCK4X4
+#cmakedefine USE_BLOCK4X4_REG
+#cmakedefine USE_BLOCK4X4_VREG
+
+#cmakedefine ENABLE_DEBUG
 
 #endif

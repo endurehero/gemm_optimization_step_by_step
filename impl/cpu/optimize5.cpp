@@ -1,9 +1,9 @@
 #include "impl/cpu/gemm_cpu.h"
 
-#ifdef USE_BLOCK4X4
+#ifdef USE_BLOCK4X4_REG
 
 /**
- * / brief implement gemm with Block4X4 and unroll the col loop and register.
+ * / brief implement gemm with Block4X4 and unroll the col loop and more register.
  */
 
 void addDot4X4Reg(int k, float* a, int lda, float*b, int ldb, float* c, int ldc, float alpha, float beta){
@@ -18,7 +18,11 @@ void addDot4X4Reg(int k, float* a, int lda, float*b, int ldb, float* c, int ldc,
         a_p0_reg = 0.0,
         a_p1_reg = 0.0,
         a_p2_reg = 0.0,
-        a_p3_reg = 0.0;
+        a_p3_reg = 0.0,
+        b_0p_reg = 0.0,
+        b_1p_reg = 0.0,
+        b_2p_reg = 0.0,
+        b_3p_reg = 0.0;
 
     float
         *a_p0_ptr = a,
@@ -32,33 +36,38 @@ void addDot4X4Reg(int k, float* a, int lda, float*b, int ldb, float* c, int ldc,
         
 
     for(int p = 0; p < k; ++p){
+        b_0p_reg = *b_0p_ptr++;
+        b_1p_reg = *b_1p_ptr++;
+        b_2p_reg = *b_2p_ptr++;
+        b_3p_reg = *b_3p_ptr++;
+
         // first row
         a_p0_reg = a_p0_ptr[p * lda];
-        c_00_reg += a_p0_reg * b_0p_ptr[p];
-        c_01_reg += a_p0_reg * b_1p_ptr[p];
-        c_02_reg += a_p0_reg * b_2p_ptr[p];
-        c_03_reg += a_p0_reg * b_3p_ptr[p];
+        c_00_reg += a_p0_reg * b_0p_reg;
+        c_01_reg += a_p0_reg * b_1p_reg;
+        c_02_reg += a_p0_reg * b_2p_reg;
+        c_03_reg += a_p0_reg * b_3p_reg;
 
         // second row
         a_p1_reg = a_p1_ptr[p * lda];
-        c_10_reg += a_p1_reg * b_0p_ptr[p];
-        c_11_reg += a_p1_reg * b_1p_ptr[p];
-        c_12_reg += a_p1_reg * b_2p_ptr[p];
-        c_13_reg += a_p1_reg * b_3p_ptr[p];
+        c_10_reg += a_p1_reg * b_0p_reg;
+        c_11_reg += a_p1_reg * b_1p_reg;
+        c_12_reg += a_p1_reg * b_2p_reg;
+        c_13_reg += a_p1_reg * b_3p_reg;
         
         // third row
         a_p2_reg = a_p2_ptr[p * lda];
-        c_20_reg += a_p2_reg * b_0p_ptr[p];
-        c_21_reg += a_p2_reg * b_1p_ptr[p];
-        c_22_reg += a_p2_reg * b_2p_ptr[p];
-        c_23_reg += a_p2_reg * b_3p_ptr[p];
+        c_20_reg += a_p2_reg * b_0p_reg;
+        c_21_reg += a_p2_reg * b_1p_reg;
+        c_22_reg += a_p2_reg * b_2p_reg;
+        c_23_reg += a_p2_reg * b_3p_reg;
 
         // fouth row
         a_p3_reg = a_p3_ptr[p * lda];
-        c_30_reg += a_p3_reg * b_0p_ptr[p];
-        c_31_reg += a_p3_reg * b_1p_ptr[p];
-        c_32_reg += a_p3_reg * b_2p_ptr[p];
-        c_33_reg += a_p3_reg * b_3p_ptr[p];
+        c_30_reg += a_p3_reg * b_0p_reg;
+        c_31_reg += a_p3_reg * b_1p_reg;
+        c_32_reg += a_p3_reg * b_2p_reg;
+        c_33_reg += a_p3_reg * b_3p_reg;
     }
 
     // first row

@@ -18,7 +18,7 @@ void gemm_cpu(int m, int n, int k, float* a, int lda, float* b, int ldb, float* 
                 tmp_c += a_head[p * lda] * b_head[p];
             }
             
-            c[cord(row, cols, ldc)] = alpha * tmp_c + beta * c[cord(row, cols, ldc)];
+            c[cord(row, col, ldc)] = alpha * tmp_c + beta * c[cord(row, col, ldc)];
         }
     }
 }

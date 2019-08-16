@@ -2,9 +2,6 @@
 #include "gemm.h"
 #include "common.h"
 
-
-
-
 int main(){
     int m = 1000;
     int n = 1000;
@@ -28,25 +25,17 @@ int main(){
     t_h.start();
     gemm.cpu();
     t_h.end();
-    cout << "cpu elapsed time : " << t_h.elapsed() << " ms,  GFLOPS: " << t_h.gflops(2 * m * n * k, t_h.elapsed()) << endl;
+    cout << "cpu elapsed time : " << t_h.elapsed() << " ms,  GFLOPS: " << gflops(2 * m * n * k, t_h.elapsed()) << endl;
     
 #ifdef USE_GPU
-    Timer<NV> t_d;
-    
-    t_d.start();
     gemm.gpu();
-    t_d.end();
-    cout << "gpu elapsed time : " << t_d.elapsed() << " ms,  GFLOPS: " << t_d.gflops(2 * m * n * k, t_d.elapsed()) << endl;
-
-
     float max_diff = 0.0, max_ratio = 0.0;
     gemm.cmp(max_diff, max_ratio);
 
     cout << "max_diff = " << max_diff << " max_ratio = " << max_ratio << endl;
 #endif
     
-#if 0
-
+#ifdef ENABLE_DEBUG
     cout << "A:" << endl;
     print(A, m, k);
     

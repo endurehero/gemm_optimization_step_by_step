@@ -8,11 +8,15 @@ cd ./build
 rm -rf *
 
 cmake \
-    -DUSE_GPU=NO \
+    -DENABLE_DEBUG=NO \
+    -DBUILD_SHARED=YES \
+    -DUSE_GPU=YES \
     -DUSE_RAW=NO \
     -DUSE_REDUCE_INDEX_OVERHEAD=NO \
     -DUSE_COL_UNROLL=NO \
     -DUSE_SCALAR_REGISTER=NO \
-    -DUSE_BLOCK4X4=YES \
+    -DUSE_BLOCK4X4=NO \
+    -DUSE_BLOCK4X4_REG=NO \
+    -DUSE_BLOCK4X4_VREG=YES \
     ..
 make

@@ -26,8 +26,8 @@ void addDot4(int k, float* a, int lda, float*b, int ldb, float* c, int ldc, floa
 
 void gemm_cpu(int m, int n, int k, float* a, int lda, float* b, int ldb, float* c, int ldc, float alpha, float beta){ 
     
-    for(int col = 0; col < _n; col += 4){
-        for(int row = 0; row < _m; ++row){
+    for(int col = 0; col < n; col += 4){
+        for(int row = 0; row < m; ++row){
             
             float* a_head = &(a[cord(row, 0, lda)]);
             float* b_head = &(b[cord(0, col, ldb)]);

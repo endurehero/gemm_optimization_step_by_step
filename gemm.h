@@ -49,6 +49,9 @@ public:
         }
     }
 
+    float* c_host(){ return _C_Host; }
+    float* c_dev_host(){ return _C_Dev_Host; }
+
 private:
     const float eps{0.000001};
 
