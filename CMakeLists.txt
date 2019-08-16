@@ -17,6 +17,7 @@ option(USE_RAW "use cpu raw" NO)
 option(USE_REDUCE_INDEX_OVERHEAD "use cpu optimize1" NO)
 option(USE_COL_UNROLL "use cpu optimize2" NO)
 option(USE_SCALAR_REGISTER "use cpu optimize3" NO)
+option(USE_BLOCK4X4 "use cpu optimize4" NO)
 
 configure_file(
     ${GEMM_SOURCE_DIR}/cmake/config.h.in
