@@ -11,6 +11,7 @@
 #cmakedefine USE_BLOCK4X4
 #cmakedefine USE_BLOCK4X4_REG
 #cmakedefine USE_BLOCK4X4_VREG
+#cmakedefine USE_BLOCK4X4_CACHED_VREG
 
 #cmakedefine ENABLE_DEBUG
 

@@ -1,4 +1,3 @@
-#include "timer.h"
 #include "gemm.h"
 #include "common.h"
 
@@ -21,11 +20,8 @@ int main(){
 
     Gemm gemm(false, false, m, n, k, A, m, B, k, C, m, alpha, beta);
     
-    Timer<CPU> t_h;
-    t_h.start();
+    
     gemm.cpu();
-    t_h.end();
-    cout << "cpu elapsed time : " << t_h.elapsed() << " ms,  GFLOPS: " << gflops(2 * m * n * k, t_h.elapsed()) << endl;
     
 #ifdef USE_GPU
     gemm.gpu();
@@ -35,7 +31,7 @@ int main(){
     cout << "max_diff = " << max_diff << " max_ratio = " << max_ratio << endl;
 #endif
     
-#ifdef ENABLE_DEBUG
+#if 0
     cout << "A:" << endl;
     print(A, m, k);
     

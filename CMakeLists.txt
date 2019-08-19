@@ -17,6 +17,10 @@ if(UNIX OR APPLE)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -Wall")
 endif()
 
+if(ENABLE_DEBUG)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g")
+endif()
+
 option(USE_RAW "use cpu raw" NO)
 option(USE_REDUCE_INDEX_OVERHEAD "use cpu optimize1" NO)
 option(USE_COL_UNROLL "use cpu optimize2" NO)
@@ -24,6 +28,7 @@ option(USE_SCALAR_REGISTER "use cpu optimize3" NO)
 option(USE_BLOCK4X4 "use cpu optimize4" NO)
 option(USE_BLOCK4X4_REG "use cpu optimize5" NO)
 option(USE_BLOCK4X4_VREG "use cpu optimize6" NO)
+option(USE_BLOCK4X4_CACHED_VREG "use cpu optimized7" NO)
 
 configure_file(
     ${GEMM_SOURCE_DIR}/cmake/config.h.in
