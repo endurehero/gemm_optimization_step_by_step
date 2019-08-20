@@ -6,16 +6,17 @@
 #include "impl/gpu/gemm_gpu.h"
 #endif
 
-
-void Gemm::gpu(){
+template<typename DataType>
+void Gemm<DataType>::gpu(){
 #ifdef USE_GPU
     gemm_gpu(_m, _n, _k, _A, _lda, _B, _ldb, _C, _ldc, _alpha, _beta, &_C_Dev_Host);
 #endif
 }
 
-void Gemm::cpu(){
+template<typename DataType>
+void Gemm<DataType>::cpu(){
         int c_size = _m * _n;
-        _C_Host = static_cast<float*>(malloc(c_size * sizeof(float)));
+        _C_Host = static_cast<DataType*>(malloc(c_size * sizeof(DataType)));
         
         memcpy(_C_Host, _C, c_size * sizeof(float));
 

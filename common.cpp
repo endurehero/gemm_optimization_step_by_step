@@ -2,8 +2,8 @@
 #include <random>
 using namespace std;
 
-
-void print(float* m, int rows, int cols){
+template<typename DataType>
+void print(DataType* m, int rows, int cols){
     if(nullptr == m){
         cout << "Invalid matrix" << endl;
         return;
@@ -18,9 +18,10 @@ void print(float* m, int rows, int cols){
     }
 }
 
-void fillRandom(float* m, int size){
+template<typename DataType>
+void fillRandom(DataType* m, int size){
     default_random_engine e;
-    uniform_real_distribution<float> u(-10, 10);
+    uniform_real_distribution<DataType> u(-10, 10);
     
     for(int i = 0; i < size; ++i){
         m[i] = u(e);

@@ -10,15 +10,15 @@ int main(){
     int size_c = m * n;
     float alpha = 1.0, beta = 0.0;
     
-    float* A = static_cast<float*>(malloc(size_a * sizeof(float)));
-    float* B = static_cast<float*>(malloc(size_b * sizeof(float)));
-    float* C = static_cast<float*>(malloc(size_c * sizeof(float)));
+    double* A = static_cast<double*>(malloc(size_a * sizeof(double)));
+    double* B = static_cast<double*>(malloc(size_b * sizeof(double)));
+    double* C = static_cast<double*>(malloc(size_c * sizeof(double)));
 
     fillRandom(A, size_a);
     fillRandom(B, size_b);
     fillRandom(C, size_c);
 
-    Gemm gemm(false, false, m, n, k, A, m, B, k, C, m, alpha, beta);
+    Gemm<double> gemm(false, false, m, n, k, A, m, B, k, C, m, alpha, beta);
     
     
     gemm.cpu();

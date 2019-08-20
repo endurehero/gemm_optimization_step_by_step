@@ -5,11 +5,12 @@
 #include <stdlib.h>
 #include <cmath>
 
+template<typename DataType>
 class Gemm{
 public:
     Gemm(bool transA, bool transB, int m, int n, int k,
-        float* A, int lda, float* B, int ldb, float* C, int ldc,
-        float alpha, float beta)
+        DataType* A, int lda, DataType* B, int ldb, DataType* C, int ldc,
+        DataType alpha, DataType beta)
         :_transA(transA),
          _transB(transB),
          _m(m), _n(n), _k(k),
@@ -32,16 +33,16 @@ public:
     void cpu();
     void gpu();
 
-    void cmp(float& max_diff, float& max_ratio){
-        float* h = _C_Host;
-        float* d = _C_Dev_Host;
+    void cmp(DataType& max_diff, DataType& max_ratio){
+        DataType* h = _C_Host;
+        DataType* d = _C_Dev_Host;
         int size = _m * _n;
         
         max_diff = fabs(h[0] - d[0]);
         max_ratio = 2 * max_diff / (h[0] + d[0] + eps);
 
         for(int i = 1; i < size; ++i){
-            float diff = fabs(h[i] - d[i]);
+            DataType diff = fabs(h[i] - d[i]);
             if(diff > max_diff){
                 max_diff = diff;
                 max_ratio = 2 * max_diff / (h[i] + d[i] + eps);
@@ -49,8 +50,8 @@ public:
         }
     }
 
-    float* c_host(){ return _C_Host; }
-    float* c_dev_host(){ return _C_Dev_Host; }
+    DataType* c_host(){ return _C_Host; }
+    DataType* c_dev_host(){ return _C_Dev_Host; }
 
 private:
     const float eps{0.000001};
@@ -63,14 +64,14 @@ private:
     int _lda;
     int _ldb;
     int _ldc;
-    float _alpha;
-    float _beta;
-    float* _A{nullptr};
-    float* _B{nullptr};
-    float* _C{nullptr};
+    DataType _alpha;
+    DataType _beta;
+    DataType* _A{nullptr};
+    DataType* _B{nullptr};
+    DataType* _C{nullptr};
 
-    float* _C_Host{nullptr};
-    float* _C_Dev_Host{nullptr};
+    DataType* _C_Host{nullptr};
+    DataType* _C_Dev_Host{nullptr};
 };
 
 #endif
