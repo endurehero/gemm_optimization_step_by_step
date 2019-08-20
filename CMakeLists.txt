@@ -7,9 +7,15 @@ include(cmake/utils.cmake)
 option(ENABLE_DEBUG "debug mode" NO)
 option(BUILD_SHARED "build gemm implement with shared library, otherwise with static library" NO)
 option(USE_GPU "use nvidia gpu to accelerate." NO)
+option(USE_CBLAS "use cblas libs" NO)
 
 if(USE_GPU)
     include(cmake/cuda.cmake)
+endif()
+
+if(USE_CBLAS)
+    include(cmake/altas.cmake)
+    include_directories(${ATLAS_INCLUDE_DIR})
 endif()
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
@@ -28,7 +34,8 @@ option(USE_SCALAR_REGISTER "use cpu optimize3" NO)
 option(USE_BLOCK4X4 "use cpu optimize4" NO)
 option(USE_BLOCK4X4_REG "use cpu optimize5" NO)
 option(USE_BLOCK4X4_VREG "use cpu optimize6" NO)
-option(USE_BLOCK4X4_CACHED_VREG "use cpu optimized7" NO)
+option(USE_BLOCK4X4_CACHED_VREG "use cpu optimize7" NO)
+option(USE_CXX11_THREAD "use cpu optimize8" NO)
 
 configure_file(
     ${GEMM_SOURCE_DIR}/cmake/config.h.in
