@@ -1,6 +1,6 @@
 #include "impl/cpu/gemm_cpu.h"
 
-#ifdef USE_SCALAR_REGISTER
+#ifdef USE_CPU_OPT3
 
 /**
  * / brief implement gemm with reducing index overhead and unroll the col loop and register.

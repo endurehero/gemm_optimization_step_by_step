@@ -10,8 +10,12 @@ set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-Wno-deprecated-gpu-targets)
 set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};--default-stream per-thread)
 
 set(CUDA_LINKER_LIBS "")
+
 if(BUILD_SHARED)
     list(APPEND CUDA_LINKER_LIBS ${CUDA_CUDART_LIBRARY})
+    if(USE_CUBLAS)
+        list(APPEND CUDA_LINKER_LIBS ${CUDA_CUBLAS_LIBRARY})
+    endif()
 else() # BUILD_STATIC
     find_path(CUDA_INCLUDE_DIRS cuda.h PATHS /usr/local/cuda/include
                                              /usr/include)
@@ -23,6 +27,12 @@ else() # BUILD_STATIC
                                    DOC "library path for cuda.")
         if(CUDA_LIBRARY)
             list(APPEND CUDA_LINKER_LIBS ${CUDA_INCLUDE_DIRS}/../lib64/libcudart_static.a)
+        
+            if(USE_CUBLAS)
+                list(APPEND CUDA_LINKER_LIBS ${CUDA_INCLUDE_DIRS}/../lib64/libcublas_static.a)
+                list(APPEND CUDA_LINKER_LIBS ${CUDA_INCLUDE_DIRS}/../lib64/libcublas_device.a)
+            endif()
+        
         endif()
     endif()
 endif()

@@ -22,8 +22,10 @@ void Gemm<DataType>::cpu(){
 
         Timer<CPU> t_h;
         t_h.start();
-    
         gemm_cpu(_m, _n, _k, _A, _lda, _B, _ldb, _C_Host, _ldc, _alpha, _beta);
         t_h.end();
         cout << "cpu elapsed time : " << t_h.elapsed() << " ms,  GFLOPS: " << gflops(2 * _m * _n * _k, t_h.elapsed()) << endl;
-    }
+}
+
+template class Gemm<float>;
+//template class Gemm<double>;

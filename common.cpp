@@ -32,3 +32,8 @@ void fillRandom(DataType* m, int size){
 float gflops(long long ins_num, float t){
         return static_cast<float>(static_cast<float>(ins_num) / t / 1000000);
 }
+
+template void print<float>(float*, int, int);
+template void print<double>(double*, int, int);
+template void fillRandom<float>(float*, int);
+template void fillRandom<double>(double*, int);

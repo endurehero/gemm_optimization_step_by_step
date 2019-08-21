@@ -1,27 +1,17 @@
-#include<stdio.h>
+
 #include "impl/gpu/gemm_gpu.h"
-#include<cuda_runtime.h>
 
-#ifdef USE_GPU_RAW
+#ifdef USE_CUBLAS
+#include"cublas_v2.h"
 
-__global__ void kr_gemm(int m, int n, int k, float* A, int lda, float*B, int ldb, float*C, int ldc, float alpha, float beta){
-
-    int r = blockIdx.x * blockDim.x + threadIdx.x;
-    int c = blockIdx.y * blockDim.y + threadIdx.y;
-    
-    if(r < m){
-        if(c < n){
-            float tmp = 0;
-            for(int i = 0; i < k; ++i){
-                tmp += A[cord(r, i, lda)] * B[cord(i, c, ldb)];
-            }
-
-            C[cord(r, c, ldc)] = alpha * tmp + beta * C[cord(r, c, ldc)];
-        }
-    }
-    
-}
-
+#define CUBLAS_CHECK(condition) \
+    do{\
+        cublasStatus_t status = condition;\
+        if(condition != CUBLAS_STATUS_SUCCESS){\
+            cout << "line " << __LINE__ << ", cublas error!" << endl;\
+            exit(1);\
+        }\
+    } while(0)
 
 void gemm_gpu(int m, int n, int k, float*a, int lda, float* b, int ldb, float* c, int ldc, float alpha, float beta, float** _C_Dev_Host){
 
@@ -45,13 +35,12 @@ void gemm_gpu(int m, int n, int k, float*a, int lda, float* b, int ldb, float* c
     cudaMemcpy(d_b, b, size_b * sizeof(float), cudaMemcpyHostToDevice);
     cudaMemcpy(d_c, c, size_c * sizeof(float), cudaMemcpyHostToDevice);
     
-    int x_block_size = 32;
-    int y_block_size = 16;
-    dim3 Dg((m + x_block_size - 1) / x_block_size, (n + y_block_size - 1) / y_block_size);
-    dim3 Db(x_block_size, y_block_size);
-    
+    cublasHandle_t handle;
+    CUBLAS_CHECK(cublasCreate(&handle));
+
     t.start();
-    kr_gemm<<<Dg, Db>>>(m, n, k, d_a, lda, d_b, ldb, d_c, ldc, alpha, beta);
+    CUBLAS_CHECK(cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N,
+                             m, n, k, &alpha, a, ldb, b, lda, &beta, c, ldc));
     t.end();
     cout << "gpu elapsed time : " << t.elapsed() << " ms,  GFLOPS: " << gflops(2 * m * n * k, t.elapsed()) << endl;
     
@@ -59,6 +48,8 @@ void gemm_gpu(int m, int n, int k, float*a, int lda, float* b, int ldb, float* c
 
     std::cout << "Gpu processed!" << std::endl;
 
+
+    CUBLAS_CHECK(cublasDestroy(handle));
     cudaFree(d_a);
     cudaFree(d_b);
     cudaFree(d_c);

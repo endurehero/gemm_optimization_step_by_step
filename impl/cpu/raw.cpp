@@ -1,6 +1,6 @@
 #include "impl/cpu/gemm_cpu.h"
 
-#ifdef USE_RAW
+#ifdef USE_CPU_RAW
 
 /**
  * / brief implement gemm without any optimization. 

@@ -1,6 +1,6 @@
 #include "impl/cpu/gemm_cpu.h"
 
-#ifdef USE_BLOCK4X4_VREG
+#ifdef USE_CPU_OPT6
 
 /**
  * / brief implement gemm with Block4X4 and unroll the col loop and more 128bits register.

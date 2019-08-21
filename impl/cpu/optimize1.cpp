@@ -1,6 +1,6 @@
 #include "impl/cpu/gemm_cpu.h"
 
-#ifdef USE_REDUCE_INDEX_OVERHEAD
+#ifdef USE_CPU_OPT1
 
 /**
  * / brief implement gemm with reducing index overhead.

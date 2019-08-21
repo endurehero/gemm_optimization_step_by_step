@@ -9,9 +9,6 @@ set(ARCHIVE_OUTPUT_DIRECTORY ${GEMM_BINARY_DIR}/lib)
 if(USE_GPU)
     set(cuda_src_file "")
     fetch_files_with_suffix_recursively(${GEMM_SOURCE_DIR}/impl "cu" cuda_src_file)
-    
-    #set(FLAG_BACKUP ${CMAKE_CXX_FLAGS})
-    #set(CMAKE_CXX_FLAGS "")
 
     if(BUILD_SHARED)
         cuda_compile(cuda_c_src_objs SHARED ${cuda_src_file})
@@ -22,8 +19,7 @@ if(USE_GPU)
         add_library(impl_static STATIC ${cuda_c_src_objs_static} ${src_file})
         target_link_libraries(impl_static ${CUDA_LINKER_LIBS})
     endif()
-    
-    #set(CMAKE_CXX_FLAGS ${FLAG_BACKUP})
+
 else()
     if(BUILD_SHARED)
         add_library(impl SHARED ${src_file})
@@ -56,9 +52,3 @@ else()
         target_link_libraries(impl ${CMAKE_THREAD_LIBS_INIT})
     endif()
 endif()
-
-
-
-
-
-

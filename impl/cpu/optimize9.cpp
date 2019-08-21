@@ -1,12 +1,13 @@
 
 #include "impl/cpu/gemm_cpu.h"
 
-#ifdef USE_CPU_OPT7
+#ifdef USE_CPU_OPT9
 #include <mmintrin.h>
 #include <xmmintrin.h> // SSE
 #include <pmmintrin.h> // SSE2
 #include <emmintrin.h> // SSE3
 #include <algorithm>
+#include <omp.h>
 /**
  * / brief implement gemm optimized with.
  *         1. unroll 4 loop
@@ -20,6 +21,23 @@ typedef union{
     __m128 v;
     float d[4];
 }v4f_t;
+
+typedef struct{
+    int m;
+    int n;
+    int k;
+    float* a;
+    int lda;
+    float* b;
+    int ldb;
+    float* c;
+    int ldc;
+    float alpha;
+    float beta;
+}thread_param_t;
+
+#define m_block 64
+#define n_block 64
 
 void addDot4X4VReg(int k, float* a, int lda, float*b, int ldb, float* c, int ldc, float alpha, float beta){
     
@@ -153,8 +171,14 @@ void kernel128X128(int m, int n, int k, float* a, int lda, float* b, int ldb, fl
  
 }
 
-void gemm_cpu(int m, int n, int k, float* a, int lda, float* b, int ldb, float* c, int ldc, float alpha, float beta){ 
-    int m_block = 128, n_block = 128;
+void gemm_cpu_per_thread(const thread_param_t& param){
+
+    int m = param.m, n = param.n, k = param.k;
+    float* a = param.a; int lda = param.lda;
+    float* b = param.b; int ldb = param.ldb;
+    float* c = param.c; int ldc = param.ldc;
+    float alpha = param.alpha, beta = param.beta;
+
     bool do_cache_a = false, do_cache_b = false, do_cache_b_now = false;
     
     if(m >  m_block) do_cache_a = true;
@@ -179,6 +203,60 @@ void gemm_cpu(int m, int n, int k, float* a, int lda, float* b, int ldb, float* 
             kernel128X128(m_real_block, n_real_block, k, a_head, lda, b_head, ldb, c_head, ldc, alpha, beta, do_cache_a, do_cache_b, do_cache_b_now);
         }
     }
+    
+}
+
+
+
+
+void gemm_cpu(int m, int n, int k, float* a, int lda, float* b, int ldb, float* c, int ldc, float alpha, float beta){
+
+    if(m % m_block != 0 || n % n_block != 0 || 0 == m || 0 == n){
+        cout << "Optimize8: Param m = " << m << " n = " << n << " not implemented!" << endl;
+        return;
+    }
+    
+    //int max_phy_thread_num = thread::hardware_concurrency();
+    bool is_row_split = true; if(n > m) is_row_split = false;
+    int m_block4 = m / m_block, n_block4 = n / n_block;
+    int real_thread_num = 6;
+
+    //cout << "max_phy_thread_num = " << max_phy_thread_num << " real_thread_num = " << real_thread_num << endl;
+
+
+    thread_param_t* params = new thread_param_t[real_thread_num]; 
+    
+    int offset = (is_row_split) ? (m_block4 / real_thread_num * m_block) : (n_block4 / real_thread_num * n_block);
+    for(int i = 0; i < real_thread_num; ++i){
+        if(is_row_split){
+            params[i].m = min(offset, m - i * offset);
+            params[i].n = n;
+            params[i].a = &a[cord(i * offset, 0, lda)];
+            params[i].b = b;
+            params[i].c = &c[cord(i * offset, 0, ldc)];
+        }
+        else{
+            params[i].m = m;
+            params[i].n = min(i * offset, n - i * offset);
+            params[i].a = a;
+            params[i].b = &b[cord(0, i * offset, ldb)];
+            params[i].c = &c[cord(0, i * offset, ldc)];
+        }
+
+        params[i].k = k;
+        params[i].lda = lda;
+        params[i].ldb = ldb;
+        params[i].ldc = ldc;
+        params[i].alpha = alpha;
+        params[i].beta = beta;
+    }
+
+    #pragma omp parallel num_threads(real_thread_num)
+    {
+        int tid = omp_get_thread_num();
+        gemm_cpu_per_thread(params[tid]);
+    }
+    delete [] params;
     
 }
 

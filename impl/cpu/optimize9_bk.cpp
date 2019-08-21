@@ -1,10 +1,31 @@
+#if 0
 #include "impl/cpu/gemm_cpu.h"
 
-#ifdef USE_CPU_OPT5
+#ifdef USE_OPENMP
+#include<omp.h>
+#include<algorithm>
+
+using namespace std;
 
 /**
  * / brief implement gemm with Block4X4 and unroll the col loop and more register.
  */
+#define THREAD_NUM 6
+#define UNROLL_SIZE 4
+
+typedef struct{
+    int m;
+    int n;
+    int k;
+    float* a;
+    int lda;
+    float* b;
+    int ldb;
+    float* c;
+    int ldc;
+    float alpha;
+    float beta;
+}thread_param_t;
 
 void addDot4X4Reg(int k, float* a, int lda, float*b, int ldb, float* c, int ldc, float alpha, float beta){
     
@@ -92,11 +113,16 @@ void addDot4X4Reg(int k, float* a, int lda, float*b, int ldb, float* c, int ldc,
     c[cord(3, 3, ldc)] = alpha * c_33_reg + beta * c[cord(3, 3, ldc)];
 }
 
-
-void gemm_cpu(int m, int n, int k, float* a, int lda, float* b, int ldb, float* c, int ldc, float alpha, float beta){ 
+//void gemm_cpu_per_thread(int m, int n, int k, float* a, int lda, float* b, int ldb, float* c, int ldc, float alpha, float beta){
+void gemm_cpu_per_thread(const thread_param_t& param){
+    int m = param.m, n = param.n, k = param.k;
+    float* a = param.a; int lda = param.lda;
+    float* b = param.b; int ldb = param.ldb;
+    float* c = param.c; int ldc = param.ldc;
+    float alpha = param.alpha, beta = param.beta;
     
-    for(int col = 0; col < n; col += 4){
-        for(int row = 0; row < m; row += 4){
+    for(int col = 0; col < n; col += UNROLL_SIZE){
+        for(int row = 0; row < m; row += UNROLL_SIZE){
             
             float* a_head = &(a[cord(row, 0, lda)]);
             float* b_head = &(b[cord(0, col, ldb)]);
@@ -107,5 +133,56 @@ void gemm_cpu(int m, int n, int k, float* a, int lda, float* b, int ldb, float* 
     
 }
 
+void gemm_cpu(int m, int n, int k, float* a, int lda, float* b, int ldb, float* c, int ldc, float alpha, float beta){
+
+    if(m % 4 != 0 || n % 4 != 0 || 0 == m || 0 == n){
+        cout << "Optimize8: Param m = " << m << " n = " << n << " not implemented!" << endl;
+        return;
+    }
+    
+    bool is_row_split = true; if(n > m) is_row_split = false;
+    int real_thread_num = THREAD_NUM;
+
+    //cout << "max_phy_thread_num = " << max_phy_thread_num << " real_thread_num = " << real_thread_num << endl;
+
+
+    thread_param_t* params = new thread_param_t[real_thread_num]; 
+    int m_block4 = m / UNROLL_SIZE, n_block4 = n / UNROLL_SIZE;
+    int offset = (is_row_split) ? (m_block4 / real_thread_num * UNROLL_SIZE) : (n_block4 / real_thread_num * UNROLL_SIZE);
+    for(int i = 0; i < real_thread_num; ++i){
+        if(is_row_split){
+            params[i].m = min(offset, m - i * offset);
+            params[i].n = n;
+            params[i].a = &a[cord(i * offset, 0, lda)];
+            params[i].b = b;
+            params[i].c = &c[cord(i * offset, 0, ldc)];
+        }
+        else{
+            params[i].m = m;
+            params[i].n = min(i * offset, n - i * offset);
+            params[i].a = a;
+            params[i].b = &b[cord(0, i * offset, ldb)];
+            params[i].c = &c[cord(0, i * offset, ldc)];
+        }
+
+        params[i].k = k;
+        params[i].lda = lda;
+        params[i].ldb = ldb;
+        params[i].ldc = ldc;
+        params[i].alpha = alpha;
+        params[i].beta = beta;
+    }
+
+    #pragma omp parallel num_threads(THREAD_NUM)
+    {
+        int tid = omp_get_thread_num();
+        gemm_cpu_per_thread(params[tid]);
+    }
+
+    delete [] params;
+}
+
+
+#endif
 
 #endif

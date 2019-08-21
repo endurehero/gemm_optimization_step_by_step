@@ -2,25 +2,25 @@
 #include "common.h"
 
 int main(){
-    int m = 1000;
-    int n = 1000;
+    int m = 1024;
+    int n = 1024;
     int k = 256;
     int size_a = m * k;
     int size_b = n * k;
     int size_c = m * n;
     float alpha = 1.0, beta = 0.0;
     
-    double* A = static_cast<double*>(malloc(size_a * sizeof(double)));
-    double* B = static_cast<double*>(malloc(size_b * sizeof(double)));
-    double* C = static_cast<double*>(malloc(size_c * sizeof(double)));
+    float* A = static_cast<float*>(malloc(size_a * sizeof(float)));
+    float* B = static_cast<float*>(malloc(size_b * sizeof(float)));
+    float* C = static_cast<float*>(malloc(size_c * sizeof(float)));
 
-    fillRandom(A, size_a);
-    fillRandom(B, size_b);
-    fillRandom(C, size_c);
+    fillRandom<float>(A, size_a);
+    fillRandom<float>(B, size_b);
+    fillRandom<float>(C, size_c);
 
-    Gemm<double> gemm(false, false, m, n, k, A, m, B, k, C, m, alpha, beta);
+    Gemm<float> gemm(false, false, m, n, k, A, m, B, k, C, m, alpha, beta);
     
-    
+     
     gemm.cpu();
     
 #ifdef USE_GPU

@@ -1,15 +1,26 @@
+
 #include "impl/cpu/gemm_cpu.h"
 
-#ifdef USE_CXX11_THREAD
-#include<thread>
-#include<algorithm>
-
+#ifdef USE_CPU_OPT8
+#include <mmintrin.h>
+#include <xmmintrin.h> // SSE
+#include <pmmintrin.h> // SSE2
+#include <emmintrin.h> // SSE3
+#include <algorithm>
+#include <thread>
+/**
+ * / brief implement gemm optimized with.
+ *         1. unroll 4 loop
+ *         2. decrease addressing overhead
+ *         3. use sse intrin(128 bits vreg)
+ *         4. cache the macro tile 128*128 into L2 cache(256KB)
+ */
 using namespace std;
 
-/**
- * / brief implement gemm with Block4X4 and unroll the col loop and more register.
- */
-#define UNROLL_SIZE 4
+typedef union{
+    __m128 v;
+    float d[4];
+}v4f_t;
 
 typedef struct{
     int m;
@@ -25,122 +36,189 @@ typedef struct{
     float beta;
 }thread_param_t;
 
-void addDot4X4Reg(int k, float* a, int lda, float*b, int ldb, float* c, int ldc, float alpha, float beta){
+#define m_block 64
+#define n_block 64
+
+void addDot4X4VReg(int k, float* a, int lda, float*b, int ldb, float* c, int ldc, float alpha, float beta){
     
-    register float 
-        c_00_reg = 0.0, c_01_reg = 0.0, c_02_reg = 0.0, c_03_reg = 0.0,
-        c_10_reg = 0.0, c_11_reg = 0.0, c_12_reg = 0.0, c_13_reg = 0.0,
-        c_20_reg = 0.0, c_21_reg = 0.0, c_22_reg = 0.0, c_23_reg = 0.0,
-        c_30_reg = 0.0, c_31_reg = 0.0, c_32_reg = 0.0, c_33_reg = 0.0;
-        
-    register float 
-        a_p0_reg = 0.0,
-        a_p1_reg = 0.0,
-        a_p2_reg = 0.0,
-        a_p3_reg = 0.0,
-        b_0p_reg = 0.0,
-        b_1p_reg = 0.0,
-        b_2p_reg = 0.0,
-        b_3p_reg = 0.0;
+    v4f_t
+        c_col0_vreg, c_col1_vreg, c_col2_vreg, c_col3_vreg,
+        a_p_vreg, b_p0_vreg, b_p1_vreg, b_p2_vreg, b_p3_vreg;
 
     float
-        *a_p0_ptr = a,
-        *a_p1_ptr = a + 1,
-        *a_p2_ptr = a + 2,
-        *a_p3_ptr = a + 3,
-        *b_0p_ptr = b,
-        *b_1p_ptr = b + ldb,
-        *b_2p_ptr = b + 2 * ldb,
-        *b_3p_ptr = b + 3 * ldb;
-        
+        *b_p0_ptr = b,
+        *b_p1_ptr = b + ldb,
+        *b_p2_ptr = b + 2 * ldb,
+        *b_p3_ptr = b + 3 * ldb;
+    
+    c_col0_vreg.v = _mm_setzero_ps();
+    c_col1_vreg.v = _mm_setzero_ps();
+    c_col2_vreg.v = _mm_setzero_ps();
+    c_col3_vreg.v = _mm_setzero_ps();
 
     for(int p = 0; p < k; ++p){
-        b_0p_reg = *b_0p_ptr++;
-        b_1p_reg = *b_1p_ptr++;
-        b_2p_reg = *b_2p_ptr++;
-        b_3p_reg = *b_3p_ptr++;
+        a_p_vreg.v = _mm_load_ps(static_cast<float*>(a)); a += lda;
+        b_p0_vreg.v = _mm_load1_ps(static_cast<float*>(b_p0_ptr++));
+        b_p1_vreg.v = _mm_load1_ps(static_cast<float*>(b_p1_ptr++));
+        b_p2_vreg.v = _mm_load1_ps(static_cast<float*>(b_p2_ptr++));
+        b_p3_vreg.v = _mm_load1_ps(static_cast<float*>(b_p3_ptr++));
 
-        // first row
-        a_p0_reg = a_p0_ptr[p * lda];
-        c_00_reg += a_p0_reg * b_0p_reg;
-        c_01_reg += a_p0_reg * b_1p_reg;
-        c_02_reg += a_p0_reg * b_2p_reg;
-        c_03_reg += a_p0_reg * b_3p_reg;
-
-        // second row
-        a_p1_reg = a_p1_ptr[p * lda];
-        c_10_reg += a_p1_reg * b_0p_reg;
-        c_11_reg += a_p1_reg * b_1p_reg;
-        c_12_reg += a_p1_reg * b_2p_reg;
-        c_13_reg += a_p1_reg * b_3p_reg;
-        
-        // third row
-        a_p2_reg = a_p2_ptr[p * lda];
-        c_20_reg += a_p2_reg * b_0p_reg;
-        c_21_reg += a_p2_reg * b_1p_reg;
-        c_22_reg += a_p2_reg * b_2p_reg;
-        c_23_reg += a_p2_reg * b_3p_reg;
-
-        // fouth row
-        a_p3_reg = a_p3_ptr[p * lda];
-        c_30_reg += a_p3_reg * b_0p_reg;
-        c_31_reg += a_p3_reg * b_1p_reg;
-        c_32_reg += a_p3_reg * b_2p_reg;
-        c_33_reg += a_p3_reg * b_3p_reg;
+        c_col0_vreg.v += a_p_vreg.v * b_p0_vreg.v;
+        c_col1_vreg.v += a_p_vreg.v * b_p1_vreg.v;
+        c_col2_vreg.v += a_p_vreg.v * b_p2_vreg.v;
+        c_col3_vreg.v += a_p_vreg.v * b_p3_vreg.v;
     }
 
-    // first row
-    c[cord(0, 0, ldc)] = alpha * c_00_reg + beta * c[cord(0, 0, ldc)];
-    c[cord(0, 1, ldc)] = alpha * c_01_reg + beta * c[cord(0, 1, ldc)];
-    c[cord(0, 2, ldc)] = alpha * c_02_reg + beta * c[cord(0, 2, ldc)];
-    c[cord(0, 3, ldc)] = alpha * c_03_reg + beta * c[cord(0, 3, ldc)];
-    // second row
-    c[cord(1, 0, ldc)] = alpha * c_10_reg + beta * c[cord(1, 0, ldc)];
-    c[cord(1, 1, ldc)] = alpha * c_11_reg + beta * c[cord(1, 1, ldc)];
-    c[cord(1, 2, ldc)] = alpha * c_12_reg + beta * c[cord(1, 2, ldc)];
-    c[cord(1, 3, ldc)] = alpha * c_13_reg + beta * c[cord(1, 3, ldc)];
-    // third row
-    c[cord(2, 0, ldc)] = alpha * c_20_reg + beta * c[cord(2, 0, ldc)];
-    c[cord(2, 1, ldc)] = alpha * c_21_reg + beta * c[cord(2, 1, ldc)];
-    c[cord(2, 2, ldc)] = alpha * c_22_reg + beta * c[cord(2, 2, ldc)];
-    c[cord(2, 3, ldc)] = alpha * c_23_reg + beta * c[cord(2, 3, ldc)];
-    // fouth row
-    c[cord(3, 0, ldc)] = alpha * c_30_reg + beta * c[cord(3, 0, ldc)];
-    c[cord(3, 1, ldc)] = alpha * c_31_reg + beta * c[cord(3, 1, ldc)];
-    c[cord(3, 2, ldc)] = alpha * c_32_reg + beta * c[cord(3, 2, ldc)];
-    c[cord(3, 3, ldc)] = alpha * c_33_reg + beta * c[cord(3, 3, ldc)];
+    // first col
+    c[cord(0, 0, ldc)] = alpha * c_col0_vreg.d[0] + beta * c[cord(0, 0, ldc)];
+    c[cord(1, 0, ldc)] = alpha * c_col0_vreg.d[1] + beta * c[cord(1, 0, ldc)];
+    c[cord(2, 0, ldc)] = alpha * c_col0_vreg.d[2] + beta * c[cord(2, 0, ldc)];
+    c[cord(3, 0, ldc)] = alpha * c_col0_vreg.d[3] + beta * c[cord(3, 0, ldc)];
+    // second col
+    c[cord(0, 1, ldc)] = alpha * c_col1_vreg.d[0] + beta * c[cord(0, 1, ldc)];
+    c[cord(1, 1, ldc)] = alpha * c_col1_vreg.d[1] + beta * c[cord(1, 1, ldc)];
+    c[cord(2, 1, ldc)] = alpha * c_col1_vreg.d[2] + beta * c[cord(2, 1, ldc)];
+    c[cord(3, 1, ldc)] = alpha * c_col1_vreg.d[3] + beta * c[cord(3, 1, ldc)];
+    // third col
+    c[cord(0, 2, ldc)] = alpha * c_col2_vreg.d[0] + beta * c[cord(0, 2, ldc)];
+    c[cord(1, 2, ldc)] = alpha * c_col2_vreg.d[1] + beta * c[cord(1, 2, ldc)];
+    c[cord(2, 2, ldc)] = alpha * c_col2_vreg.d[2] + beta * c[cord(2, 2, ldc)];
+    c[cord(3, 2, ldc)] = alpha * c_col2_vreg.d[3] + beta * c[cord(3, 2, ldc)];
+    // fouth
+    c[cord(0, 3, ldc)] = alpha * c_col3_vreg.d[0] + beta * c[cord(0, 3, ldc)];
+    c[cord(1, 3, ldc)] = alpha * c_col3_vreg.d[1] + beta * c[cord(1, 3, ldc)];
+    c[cord(2, 3, ldc)] = alpha * c_col3_vreg.d[2] + beta * c[cord(2, 3, ldc)];
+    c[cord(3, 3, ldc)] = alpha * c_col3_vreg.d[3] + beta * c[cord(3, 3, ldc)];
 }
 
-//void gemm_cpu_per_thread(int m, int n, int k, float* a, int lda, float* b, int ldb, float* c, int ldc, float alpha, float beta){
+void pack_a(int k, float* src_a, int src_lda, float* dst_a, int dst_lda){
+    float* src_r0_a = src_a,     *dst_r0_a = dst_a;
+    float* src_r1_a = src_a + 1, *dst_r1_a = dst_a + 1;
+    float* src_r2_a = src_a + 2, *dst_r2_a = dst_a + 2;
+    float* src_r3_a = src_a + 3, *dst_r3_a = dst_a + 3;
+
+    for(int p = 0; p < k; ++p){
+        *dst_r0_a = *src_r0_a; src_r0_a += src_lda; dst_r0_a += dst_lda;
+        *dst_r1_a = *src_r1_a; src_r1_a += src_lda; dst_r1_a += dst_lda;
+        *dst_r2_a = *src_r2_a; src_r2_a += src_lda; dst_r2_a += dst_lda;
+        *dst_r3_a = *src_r3_a; src_r3_a += src_lda; dst_r3_a += dst_lda;
+    }
+}
+
+void pack_b(int k, float* src_b, int src_ldb, float* dst_b, int dst_ldb){
+    float* src_c0_b = src_b,               *dst_c0_b = dst_b;
+    float* src_c1_b = src_b + src_ldb,     *dst_c1_b = dst_b + dst_ldb;
+    float* src_c2_b = src_b + 2 * src_ldb, *dst_c2_b = dst_b + 2 * dst_ldb;
+    float* src_c3_b = src_b + 3 * src_ldb, *dst_c3_b = dst_b + 3 * dst_ldb;
+
+    for(int p = 0; p < k; ++p){
+        *dst_c0_b++ = *src_c0_b++;
+        *dst_c1_b++ = *src_c1_b++;
+        *dst_c2_b++ = *src_c2_b++;
+        *dst_c3_b++ = *src_c3_b++;
+    }
+}
+
+void kernel128X128(int m, int n, int k, float* a, int lda, float* b, int ldb, float* c, int ldc, float alpha, float beta, bool do_cache_a, bool do_cache_b, bool do_cache_b_now){
+
+    float* real_a = nullptr, *real_b = nullptr;
+    
+    if(do_cache_a){
+        real_a = static_cast<float*>(malloc(m * k * sizeof(float)));
+        if(nullptr == a){
+            cout << "malloc failed! Line: "<< __LINE__ << endl; exit(1);
+        }
+    }
+    else{
+        real_a = a;
+    }
+
+    if(do_cache_b){
+        static float* b_cache = static_cast<float*>(malloc(k * n * sizeof(float)));
+        if(nullptr == b_cache){
+            cout << "malloc failed! Line: "<< __LINE__ << endl; exit(1);
+        }
+        real_b = b_cache;
+    }
+    else{
+        real_b = b;
+    }
+
+
+    for(int col = 0; col < n; col += 4){
+        if(do_cache_b && do_cache_b_now){
+            pack_b(k, &b[cord(0, col, ldb)], ldb, &real_b[col * k], k);
+        }
+
+        for(int row = 0; row < m; row += 4){
+            if(do_cache_a && 0 == col){
+                pack_a(k, &a[cord(row, 0, lda)], lda, &real_a[row], m);
+            }
+
+            float* a_head = (do_cache_a) ? &real_a[row] : &real_a[cord(row, 0, lda)];
+            float* b_head = (do_cache_b) ? &real_b[k * col] : &real_b[cord(0, col, ldb)];
+            float* c_head = &c[cord(row, col, ldc)];
+            int real_lda = (do_cache_a) ? m : lda;
+            int real_ldb = (do_cache_b) ? k : ldb;
+            
+            addDot4X4VReg(k, a_head, real_lda, b_head, real_ldb, c_head, ldc, alpha, beta);
+        }
+    }
+
+    if(do_cache_a){
+        free(real_a); real_a = nullptr;
+    }
+ 
+}
+
 void gemm_cpu_per_thread(const thread_param_t& param){
+
     int m = param.m, n = param.n, k = param.k;
     float* a = param.a; int lda = param.lda;
     float* b = param.b; int ldb = param.ldb;
     float* c = param.c; int ldc = param.ldc;
     float alpha = param.alpha, beta = param.beta;
+
+    bool do_cache_a = false, do_cache_b = false, do_cache_b_now = false;
     
-    for(int col = 0; col < n; col += UNROLL_SIZE){
-        for(int row = 0; row < m; row += UNROLL_SIZE){
+    if(m >  m_block) do_cache_a = true;
+    if(n > n_block) do_cache_b = true;
+
+    for(int col = 0; col < n; col += n_block){
+        for(int row = 0; row < m; row += m_block){
             
             float* a_head = &(a[cord(row, 0, lda)]);
             float* b_head = &(b[cord(0, col, ldb)]);
             float* c_head = &(c[cord(row, col, ldc)]);
-            addDot4X4Reg(k, a_head, lda, b_head, ldb, c_head, ldc, alpha, beta);
+
+            if(0 == row) do_cache_b_now = true;
+            else do_cache_b_now = false;
+            
+            int m_real_block = min(m - row, m_block);
+            int n_real_block = min(n - col, n_block);
+
+            do_cache_a = false;
+            do_cache_b = false;
+            
+            kernel128X128(m_real_block, n_real_block, k, a_head, lda, b_head, ldb, c_head, ldc, alpha, beta, do_cache_a, do_cache_b, do_cache_b_now);
         }
     }
     
 }
 
+
+
+
 void gemm_cpu(int m, int n, int k, float* a, int lda, float* b, int ldb, float* c, int ldc, float alpha, float beta){
 
-    if(m % 4 != 0 || n % 4 != 0 || 0 == m || 0 == n){
+    if(m % m_block != 0 || n % n_block != 0 || 0 == m || 0 == n){
         cout << "Optimize8: Param m = " << m << " n = " << n << " not implemented!" << endl;
         return;
     }
     
     int max_phy_thread_num = thread::hardware_concurrency();
     bool is_row_split = true; if(n > m) is_row_split = false;
-    int m_block4 = m / UNROLL_SIZE, n_block4 = n / UNROLL_SIZE;
+    int m_block4 = m / m_block, n_block4 = n / n_block;
     int real_thread_num = min(max_phy_thread_num, (is_row_split) ? m_block4 : n_block4);
 
     //cout << "max_phy_thread_num = " << max_phy_thread_num << " real_thread_num = " << real_thread_num << endl;
@@ -148,7 +226,7 @@ void gemm_cpu(int m, int n, int k, float* a, int lda, float* b, int ldb, float* 
 
     thread_param_t* params = new thread_param_t[real_thread_num]; 
     
-    int offset = (is_row_split) ? (m_block4 / real_thread_num * UNROLL_SIZE) : (n_block4 / real_thread_num * UNROLL_SIZE);
+    int offset = (is_row_split) ? (m_block4 / real_thread_num * m_block) : (n_block4 / real_thread_num * n_block);
     for(int i = 0; i < real_thread_num; ++i){
         if(is_row_split){
             params[i].m = min(offset, m - i * offset);

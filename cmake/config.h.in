@@ -2,18 +2,24 @@
 #define GEMM_CONFIGURE_GUARD_H
 
 #cmakedefine BUILD_SHARED
-#cmakedefine USE_GPU
-
-#cmakedefine USE_RAW
-#cmakedefine USE_REDUCE_INDEX_OVERHEAD
-#cmakedefine USE_COL_UNROLL
-#cmakedefine USE_SCALAR_REGISTER
-#cmakedefine USE_BLOCK4X4
-#cmakedefine USE_BLOCK4X4_REG
-#cmakedefine USE_BLOCK4X4_VREG
-#cmakedefine USE_BLOCK4X4_CACHED_VREG
-#cmakedefine USE_CXX11_THREAD
-
 #cmakedefine ENABLE_DEBUG
+
 #cmakedefine USE_CBLAS
+#cmakedefine USE_CPU_RAW
+#cmakedefine USE_CPU_OPT1
+#cmakedefine USE_CPU_OPT2
+#cmakedefine USE_CPU_OPT3
+#cmakedefine USE_CPU_OPT4
+#cmakedefine USE_CPU_OPT5
+#cmakedefine USE_CPU_OPT6
+#cmakedefine USE_CPU_OPT7
+#cmakedefine USE_CPU_OPT8
+#cmakedefine USE_CPU_OPT9
+
+#cmakedefine USE_GPU
+#cmakedefine USE_CUBLAS
+#cmakedefine USE_GPU_RAW
+#cmakedefine USE_GPU_OPT1
+#cmakedefine USE_GPU_OPT2
+
 #endif
