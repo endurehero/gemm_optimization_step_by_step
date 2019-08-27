@@ -21,5 +21,6 @@
 #cmakedefine USE_GPU_RAW
 #cmakedefine USE_GPU_OPT1
 #cmakedefine USE_GPU_OPT2
+#cmakedefine USE_TENSOR_CORE
 
 #endif

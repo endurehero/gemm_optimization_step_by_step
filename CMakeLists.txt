@@ -14,6 +14,7 @@ if(USE_GPU)
     option(USE_GPU_RAW  "use cpu raw" NO)
     option(USE_GPU_OPT1 "use cpu optimize1" NO)
     option(USE_GPU_OPT2 "use cpu optimize2" NO)
+    option(USE_TENSOR_CORE "use tensor core" NO)
     include(cmake/cuda.cmake)
 endif()
 

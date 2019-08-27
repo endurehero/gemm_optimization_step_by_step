@@ -28,7 +28,7 @@ int main(){
     float max_diff = 0.0, max_ratio = 0.0;
     gemm.cmp(max_diff, max_ratio);
 
-    cout << "max_diff = " << max_diff << " max_ratio = " << max_ratio << endl;
+    std::cout << "max_diff = " << max_diff << " max_ratio = " << max_ratio << std::endl;
 #endif
     
 #if 0

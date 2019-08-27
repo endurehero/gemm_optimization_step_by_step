@@ -1,17 +1,7 @@
-
+#if 0
 #include "impl/gpu/gemm_gpu.h"
 
 #ifdef USE_CUBLAS
-#include"cublas_v2.h"
-
-#define CUBLAS_CHECK(condition) \
-    do{\
-        cublasStatus_t status = condition;\
-        if(condition != CUBLAS_STATUS_SUCCESS){\
-            cout << "line " << __LINE__ << ", cublas error!" << endl;\
-            exit(1);\
-        }\
-    } while(0)
 
 void gemm_gpu(int m, int n, int k, float*a, int lda, float* b, int ldb, float* c, int ldc, float alpha, float beta, float** _C_Dev_Host){
 
@@ -35,24 +25,32 @@ void gemm_gpu(int m, int n, int k, float*a, int lda, float* b, int ldb, float* c
     cudaMemcpy(d_b, b, size_b * sizeof(float), cudaMemcpyHostToDevice);
     cudaMemcpy(d_c, c, size_c * sizeof(float), cudaMemcpyHostToDevice);
     
-    cublasHandle_t handle;
-    CUBLAS_CHECK(cublasCreate(&handle));
+    
 
+    cublasHandle_t cublasHandle;
+    cublasErrCheck(cublasCreate(&cublasHandle));
     t.start();
-    CUBLAS_CHECK(cublasSgemm(handle, CUBLAS_OP_N, CUBLAS_OP_N,
-                             m, n, k, &alpha, a, ldb, b, lda, &beta, c, ldc));
+    cublasErrCheck(cublasGemmEx(cublasHandle, CUBLAS_OP_N, CUBLAS_OP_N, 
+                                m, n, k, &alpha, 
+                                d_a, CUDA_R_32F, lda,
+                                d_b, CUDA_R_32F, ldb, &beta,
+                                d_c, CUDA_R_32F, ldc,
+                                CUDA_R_32F, CUBLAS_GEMM_DEFAULT));
     t.end();
-    cout << "gpu elapsed time : " << t.elapsed() << " ms,  GFLOPS: " << gflops(2 * m * n * k, t.elapsed()) << endl;
+
+
+    std::cout << "gpu elapsed time : " << t.elapsed() << " ms,  GFLOPS: " << gflops(2 * m * n * k, t.elapsed()) << std::endl;
     
     cudaMemcpy(*_C_Dev_Host, d_c, size_c * sizeof(float), cudaMemcpyDeviceToHost);
 
     std::cout << "Gpu processed!" << std::endl;
 
 
-    CUBLAS_CHECK(cublasDestroy(handle));
+    cublasErrCheck(cublasDestroy(cublasHandle));
     cudaFree(d_a);
     cudaFree(d_b);
     cudaFree(d_c);
 }
 
+#endif
 #endif

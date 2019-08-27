@@ -10,6 +10,9 @@ if(USE_GPU)
     set(cuda_src_file "")
     fetch_files_with_suffix_recursively(${GEMM_SOURCE_DIR}/impl "cu" cuda_src_file)
 
+    set(CXX_BACKUP ${CMAKE_CXX_FLAGS})
+    set(CMAKE_CXX_FLAGS "")
+
     if(BUILD_SHARED)
         cuda_compile(cuda_c_src_objs SHARED ${cuda_src_file})
         add_library(impl SHARED ${cuda_c_src_objs} ${src_file})
@@ -19,6 +22,8 @@ if(USE_GPU)
         add_library(impl_static STATIC ${cuda_c_src_objs_static} ${src_file})
         target_link_libraries(impl_static ${CUDA_LINKER_LIBS})
     endif()
+
+    set(CMAKE_CXX_FLAGS ${CXX_BACKUP})
 
 else()
     if(BUILD_SHARED)

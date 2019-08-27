@@ -7,8 +7,6 @@
 #include <cuda_runtime.h>
 #endif
 
-using namespace std;
-using namespace chrono;
 
 struct NV{};
 struct CPU{};
@@ -23,21 +21,21 @@ public:
     }
 
     void start(){
-        _start = system_clock::now();
+        _start = std::chrono::system_clock::now();
     }
     
     void end(){
-        _end = system_clock::now();
+        _end = std::chrono::system_clock::now();
     }
 
     float elapsed(){
-        return duration_cast<milliseconds>(_end - _start).count();
+        return std::chrono::duration_cast<std::chrono::milliseconds>(_end - _start).count();
     }
     
 
 private:
-    time_point<system_clock> _start;
-    time_point<system_clock> _end;
+    std::chrono::time_point<std::chrono::system_clock> _start;
+    std::chrono::time_point<std::chrono::system_clock> _end;
 
 };
 

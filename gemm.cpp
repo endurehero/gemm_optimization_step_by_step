@@ -6,6 +6,7 @@
 #include "impl/gpu/gemm_gpu.h"
 #endif
 
+using namespace std;
 template<typename DataType>
 void Gemm<DataType>::gpu(){
 #ifdef USE_GPU
