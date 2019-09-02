@@ -1,31 +1,26 @@
 #!/bin/bash
 
-if [ ! -d "./build" ]; then
-    mkdir ./build
+if [ -d "./gemm_build" ]; then
+    rm -rf ./gemm_build
 fi
 
-cd ./build
-rm -rf *
+if [ -d "./output" ]; then
+    rm -rf ./output
+fi
+
+mkdir ./output
+mkdir ./gemm_build
+
+cd ./gemm_build
 
 cmake \
-    -DENABLE_DEBUG=NO \
+    -DENABLE_DEBUG=YES \
     -DBUILD_SHARED=YES \
     -DUSE_CBLAS=YES \
-    -DUSE_CPU_RAW=NO \
-    -DUSE_CPU_OPT1=NO \
-    -DUSE_CPU_OPT2=NO \
-    -DUSE_CPU_OPT3=NO \
-    -DUSE_CPU_OPT4=NO \
-    -DUSE_CPU_OPT5=NO \
-    -DUSE_CPU_OPT6=NO \
-    -DUSE_CPU_OPT7=NO \
-    -DUSE_CPU_OPT8=NO \
-    -DUSE_CPU_OPT9=NO \
+    -DUSE_OPENMP=YES \
+    -DUSE_THREADS=YES \
     -DUSE_GPU=YES \
         -DUSE_CUBLAS=YES \
-        -DUSE_GPU_RAW=NO \
-        -DUSE_GPU_OPT1=NO \
-        -DUSE_GPU_OPT2=NO \
-        -DUSE_TENSOR_CORE=YES \
+        -DUSE_TENSOR_CORE=NO \
     ..
 make

@@ -30,3 +30,10 @@
 *.exe
 *.out
 *.app
+
+# Vscode
+*.vscode
+
+# Build output
+gemm_build
+output

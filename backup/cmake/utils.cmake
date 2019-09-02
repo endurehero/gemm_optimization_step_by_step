@@ -24,19 +24,7 @@ function(fetch_files_with_suffix_recursively search_dir suffix outputs)
         set(abs_dir ${abs_dir} ${search_dir}/${d})
     endforeach()
     
+    message(STATUS "outputs: ${abs_dir}")
+
     set(${outputs} ${${outputs}} ${abs_dir} PARENT_SCOPE)
-endfunction()
-
-function(fetch_include_recursively root_dir)
-    if(IS_DIRECTORY ${root_dir})
-        #message(STATUS "root_dir = ${root_dir}")
-        include_directories(${root_dir})
-    endif()
-
-    file(GLOB all_sub RELATIVE ${root_dir} ${root_dir}/*)
-    foreach(sub ${all_sub})
-        if(IS_DIRECTORY ${root_dir}/${sub})
-            fetch_include_recursively(${root_dir}/${sub})
-        endif()
-    endforeach()
 endfunction()

@@ -33,6 +33,4 @@ if(ATLAS_FOUND)
     mark_as_advanced(${looked_for})
     
     message(STATUS "Found Atlas (include: ${atlas_cblas_include_dir} library: ${atlas_cblas_lib}")
-
-    set(LINKER_LIBS ${LINKER_LIBS} ${ATLAS_LIBRARIES})
 endif()

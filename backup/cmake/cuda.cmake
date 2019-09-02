@@ -1,21 +1,13 @@
 
 find_package(CUDA REQUIRED)
 include_directories(SYSTEM ${CUDA_INCLUDE_DIRS})
-
-if(ENABLE_DEBUG)
-set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-Xcompiler -fPIC)
-set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-G)
-set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-g)
-set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};--default-stream per-thread)
-set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-Wno-deprecated-gpu-targets)
+set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};--ptxas-options=-v)
+set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-use_fast_math)    
 set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-lineinfo)
-else()
 set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-Xcompiler -fPIC)
 set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-O3)
-set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};--default-stream per-thread)
 set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-Wno-deprecated-gpu-targets)
-endif()
-
+set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};--default-stream per-thread)
 set(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-std=c++11)
 
 if(USE_TENSOR_CORE)

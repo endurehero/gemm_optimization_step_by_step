@@ -1,9 +1,6 @@
 cmake_minimum_required(VERSION 2.8)
 
-project(GEMM C CXX)
-
-set(LINKER_LIBS "")
-set(EXEC_OUTPUT ${GEMM_SOURCE_DIR}/output)
+project(GEMM)
 
 include(cmake/utils.cmake)
 
@@ -11,11 +8,12 @@ option(ENABLE_DEBUG "debug mode" NO)
 option(BUILD_SHARED "build gemm implement with shared library, otherwise with static library" NO)
 option(USE_GPU "use nvidia gpu to accelerate." NO)
 option(USE_CBLAS "use cblas libs" NO)
-option(USE_OPENMP "use openmp libs" NO)
-option(USE_THREADS "use C++11 Thread libs" NO)
 
 if(USE_GPU)
     option(USE_CUBLAS "use cublas lib" NO)
+    option(USE_GPU_RAW  "use cpu raw" NO)
+    option(USE_GPU_OPT1 "use cpu optimize1" NO)
+    option(USE_GPU_OPT2 "use cpu optimize2" NO)
     option(USE_TENSOR_CORE "use tensor core" NO)
     include(cmake/cuda.cmake)
 endif()
@@ -34,11 +32,23 @@ if(ENABLE_DEBUG)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g")
 endif()
 
-if(USE_THREADS)
+option(USE_CPU_RAW  "use cpu raw" NO)
+option(USE_CPU_OPT1 "use cpu optimize1" NO)
+option(USE_CPU_OPT2 "use cpu optimize2" NO)
+option(USE_CPU_OPT3 "use cpu optimize3" NO)
+option(USE_CPU_OPT4 "use cpu optimize4" NO)
+option(USE_CPU_OPT5 "use cpu optimize5" NO)
+option(USE_CPU_OPT6 "use cpu optimize6" NO)
+option(USE_CPU_OPT7 "use cpu optimize7" NO)
+option(USE_CPU_OPT8 "use cpu optimize8" NO)
+option(USE_CPU_OPT9 "use cpu optimize9" NO)
+
+
+if(USE_CPU_OPT8)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
 endif()
 
-if(USE_OPENMP)
+if(USE_CPU_OPT9)
     FIND_PACKAGE( OpenMP REQUIRED)
     if(OPENMP_FOUND)
         message("OPENMP FOUND")
@@ -52,8 +62,20 @@ configure_file(
     ${GEMM_SOURCE_DIR}/cmake/config.h.in
     ${GEMM_BINARY_DIR}/config.h
 )
+
 include_directories(${GEMM_BINARY_DIR})
 include_directories(${GEMM_SOURCE_DIR})
+include_directories(${GEMM_SOURCE_DIR}/impl)
+add_subdirectory(${GEMM_SOURCE_DIR}/impl)
 
-fetch_include_recursively(${GEMM_SOURCE_DIR}/include)
-add_subdirectory(${GEMM_SOURCE_DIR}/src)
+
+add_executable(
+    GEMM
+    main.cpp gemm.cpp common.cpp
+)
+
+if(BUILD_SHARED)
+    target_link_libraries(GEMM impl)
+else()
+    target_link_libraries(GEMM -Wl,--whole-archive impl_static -Wl,--no-whole-archive)
+endif()
