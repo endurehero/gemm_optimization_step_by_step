@@ -3,6 +3,8 @@
 #include<cuda_runtime.h>
 
 #ifdef USE_GPU_RAW
+#include<string>
+static std::string desc = "GPU : RAW IMPLEMENTATION";
 
 __global__ void kr_gemm(int m, int n, int k, float* A, int lda, float*B, int ldb, float*C, int ldc, float alpha, float beta){
 
@@ -23,8 +25,10 @@ __global__ void kr_gemm(int m, int n, int k, float* A, int lda, float*B, int ldb
 }
 
 
-void gemm_gpu(int m, int n, int k, float*a, int lda, float* b, int ldb, float* c, int ldc, float alpha, float beta, float** _C_Dev_Host){
+void gemm_gpu(int m, int n, int k, float*a, int lda, float* b, int ldb, float* c, int ldc, float alpha, float beta, float** _C_Dev_Host, std::vector<float>& time, int warm_up, int iter_num){
 
+    std::cout << desc << std::endl;
+    
     Timer<NV> t;
 
     float* d_a = nullptr;
@@ -49,11 +53,21 @@ void gemm_gpu(int m, int n, int k, float*a, int lda, float* b, int ldb, float* c
     int y_block_size = 16;
     dim3 Dg((m + x_block_size - 1) / x_block_size, (n + y_block_size - 1) / y_block_size);
     dim3 Db(x_block_size, y_block_size);
+
+
+    // warm warm_up
+    for(int i = 0; i < warm_up; ++i){
+        kr_gemm<<<Dg, Db>>>(m, n, k, d_a, lda, d_b, ldb, d_c, ldc, alpha, beta);    
+    }
+
+    for(int i = 0; i < iter_num; ++i){
+        t.start();
+        kr_gemm<<<Dg, Db>>>(m, n, k, d_a, lda, d_b, ldb, d_c, ldc, alpha, beta);
+        t.end();    
+    }
     
-    t.start();
-    kr_gemm<<<Dg, Db>>>(m, n, k, d_a, lda, d_b, ldb, d_c, ldc, alpha, beta);
-    t.end();
-    std::cout << "gpu elapsed time : " << t.elapsed() << " ms,  GFLOPS: " << gflops(2 * m * n * k, t.elapsed()) << std::endl;
+    std::cout << "gpu elapsed time : " << t.getAverageTimeMs() << " ms,  GFLOPS: " << gflops(2 * m * n * k, t.getAverageTimeMs()) << std::endl;
+    time.emplace_back(t.getAverageTimeMs());
     
     cudaMemcpy(*_C_Dev_Host, d_c, size_c * sizeof(float), cudaMemcpyDeviceToHost);
 

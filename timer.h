@@ -2,6 +2,7 @@
 #define TIMER_H
 
 #include <chrono>
+#include <list>
 
 #ifdef USE_GPU
 #include <cuda_runtime.h>
@@ -26,16 +27,31 @@ public:
     
     void end(){
         _end = std::chrono::system_clock::now();
+        _time_record.push_back(elapsed());
     }
 
     float elapsed(){
         return std::chrono::duration_cast<std::chrono::milliseconds>(_end - _start).count();
     }
     
+    void clear(){
+        _time_record.clear();
+    }
+
+    float getAverageTimeMs(){
+        float acc = 0.0;
+        for(auto itr = _time_record.begin(); itr != _time_record.end(); ++itr){
+            acc += *itr;
+        }
+
+        acc /= _time_record.size();
+        return acc;
+    }
 
 private:
     std::chrono::time_point<std::chrono::system_clock> _start;
     std::chrono::time_point<std::chrono::system_clock> _end;
+    std::list<float> _time_record;
 
 };
 
@@ -60,6 +76,8 @@ public:
     void end(){
         cudaEventRecord(_end);
         cudaEventSynchronize(_end);
+
+        _time_record.push_back(elapsed());
     }
 
     float elapsed(){
@@ -68,8 +86,23 @@ public:
         return t;
     }
 
+    void clear(){
+        _time_record.clear();
+    }
+
+    float getAverageTimeMs(){
+        float acc = 0.0;
+        for(auto itr = _time_record.begin(); itr != _time_record.end(); ++itr){
+            acc += *itr;
+        }
+
+        acc /= _time_record.size();
+        return acc;
+    }
+
 private:
     cudaEvent_t _start, _end;
+    std::list<float> _time_record;
 
 };
 #endif

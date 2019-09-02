@@ -3,7 +3,7 @@
 
 #ifdef USE_CUBLAS
 
-void gemm_gpu(int m, int n, int k, float*a, int lda, float* b, int ldb, float* c, int ldc, float alpha, float beta, float** _C_Dev_Host){
+void gemm_gpu(int m, int n, int k, float*a, int lda, float* b, int ldb, float* c, int ldc, float alpha, float beta, float** _C_Dev_Host, std::vector<float>& time, int warm_up, int iter_num){
 
     Timer<NV> t;
 
@@ -29,18 +29,33 @@ void gemm_gpu(int m, int n, int k, float*a, int lda, float* b, int ldb, float* c
 
     cublasHandle_t cublasHandle;
     cublasErrCheck(cublasCreate(&cublasHandle));
-    t.start();
-    cublasErrCheck(cublasGemmEx(cublasHandle, CUBLAS_OP_N, CUBLAS_OP_N, 
+
+
+    // warm up
+    for(int i = 0; i < warm_up; ++i){
+        cublasErrCheck(cublasGemmEx(cublasHandle, CUBLAS_OP_N, CUBLAS_OP_N, 
                                 m, n, k, &alpha, 
                                 d_a, CUDA_R_32F, lda,
                                 d_b, CUDA_R_32F, ldb, &beta,
                                 d_c, CUDA_R_32F, ldc,
-                                CUDA_R_32F, CUBLAS_GEMM_DEFAULT));
-    t.end();
+                                CUDA_R_32F, CUBLAS_GEMM_DEFAULT));    
+    }
 
 
-    std::cout << "gpu elapsed time : " << t.elapsed() << " ms,  GFLOPS: " << gflops(2 * m * n * k, t.elapsed()) << std::endl;
-    
+    for(int i =0; i < iter_num; ++i){
+        t.start();
+        cublasErrCheck(cublasGemmEx(cublasHandle, CUBLAS_OP_N, CUBLAS_OP_N, 
+                                    m, n, k, &alpha, 
+                                    d_a, CUDA_R_32F, lda,
+                                    d_b, CUDA_R_32F, ldb, &beta,
+                                    d_c, CUDA_R_32F, ldc,
+                                    CUDA_R_32F, CUBLAS_GEMM_DEFAULT));
+        t.end();    
+    }
+
+    std::cout << "gpu elapsed time : " << t.getAverageTimeMs() << " ms,  GFLOPS: " << gflops(2 * m * n * k, t.getAverageTimeMs()) << std::endl;
+    time.emplace_back(t.getAverageTimeMs());
+
     cudaMemcpy(*_C_Dev_Host, d_c, size_c * sizeof(float), cudaMemcpyDeviceToHost);
 
     std::cout << "Gpu processed!" << std::endl;

@@ -4,6 +4,7 @@
 #include <memory.h>
 #include <stdlib.h>
 #include <cmath>
+#include <vector>
 
 template<typename DataType>
 class Gemm{
@@ -30,8 +31,8 @@ public:
         }
     }
 
-    void cpu();
-    void gpu();
+    void cpu(std::vector<float>&, int warp_up, int iter_num);
+    void gpu(std::vector<float>&, int warp_up, int iter_num);
 
     void cmp(DataType& max_diff, DataType& max_ratio){
         DataType* h = _C_Host;

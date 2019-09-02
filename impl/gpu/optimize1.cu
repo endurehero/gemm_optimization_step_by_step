@@ -6,6 +6,11 @@
  * /use shared memory
  */
 #ifdef USE_GPU_OPT1
+#include<string>
+static std::string desc = "\
+GPU : OPT1 IMPLEMENTATION\n \
+    Use shared to cache block tile.\
+";
 
 #define BLOCK_SIZE 16
 
@@ -46,8 +51,9 @@ __global__ void kr_gemm(int m, int n, int k, float* a, int lda, float*b, int ldb
 
 }
 
-void gemm_gpu(int m, int n, int k, float*a, int lda, float* b, int ldb, float* c, int ldc, float alpha, float beta, float** _C_Dev_Host){
+void gemm_gpu(int m, int n, int k, float*a, int lda, float* b, int ldb, float* c, int ldc, float alpha, float beta, float** _C_Dev_Host, std::vector<float>& time, int warm_up, int iter_num){
 
+    std::cout << desc << std::endl;
     Timer<NV> t;
 
     float* d_a = nullptr;
@@ -70,11 +76,20 @@ void gemm_gpu(int m, int n, int k, float*a, int lda, float* b, int ldb, float* c
 
     dim3 Dg((m + BLOCK_SIZE - 1) / BLOCK_SIZE, (n + BLOCK_SIZE - 1) / BLOCK_SIZE);
     dim3 Db(BLOCK_SIZE, BLOCK_SIZE);
+
+    //warm up
+    for(int i = 0; i < warm_up; ++i){
+        kr_gemm<<<Dg, Db>>>(m, n, k, d_a, lda, d_b, ldb, d_c, ldc, alpha, beta);    
+    }
     
-    t.start();
-    kr_gemm<<<Dg, Db>>>(m, n, k, d_a, lda, d_b, ldb, d_c, ldc, alpha, beta);
-    t.end();
-    std::cout << "gpu elapsed time : " << t.elapsed() << " ms,  GFLOPS: " << gflops(2 * m * n * k, t.elapsed()) << std::endl;
+    for(int i = 0; i < iter_num; ++i){
+        t.start();
+        kr_gemm<<<Dg, Db>>>(m, n, k, d_a, lda, d_b, ldb, d_c, ldc, alpha, beta);
+        t.end();   
+    }
+    
+    std::cout << "gpu elapsed time : " << t.getAverageTimeMs() << " ms,  GFLOPS: " << gflops(2 * m * n * k, t.getAverageTimeMs()) << std::endl;
+    time.emplace_back(t.getAverageTimeMs());
     
     cudaMemcpy(*_C_Dev_Host, d_c, size_c * sizeof(float), cudaMemcpyDeviceToHost);
 

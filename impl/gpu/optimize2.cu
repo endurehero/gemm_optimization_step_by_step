@@ -12,6 +12,16 @@
  */
 
 #ifdef USE_GPU_OPT2
+#include <string>
+static std::string desc = "\
+GPU : OPT2 IMPLEMENTATION\n \
+    add workload per thread.\n \
+         if one thread only compute one element in c matrix, it will take 3 instrinctions as following:\n\
+             #1  load one element in A from shared mem to register file.\n\
+             #2  load one element in B from shared mem to register file.\n\
+             #3  FMA.\n\
+         try to add workload for one thread to increase the ratio of compute / memory load. \
+";
 
 #define MACRO_SIZE 64
 #define BLOCK_SIZE 16
@@ -100,8 +110,9 @@ __global__ void kr_gemm(int m, int n, int k, float* a, int lda, float*b, int ldb
     
 }
 
-void gemm_gpu(int m, int n, int k, float*a, int lda, float* b, int ldb, float* c, int ldc, float alpha, float beta, float** _C_Dev_Host){
+void gemm_gpu(int m, int n, int k, float*a, int lda, float* b, int ldb, float* c, int ldc, float alpha, float beta, float** _C_Dev_Host, std::vector<float>& time, int warm_up, int iter_num){
 
+    std::cout << desc << std::endl;
     Timer<NV> t;
 
     float* d_a = nullptr;
@@ -124,12 +135,21 @@ void gemm_gpu(int m, int n, int k, float*a, int lda, float* b, int ldb, float* c
 
     dim3 Dg((m + MACRO_SIZE - 1) / MACRO_SIZE, (n + MACRO_SIZE - 1) / MACRO_SIZE);
     dim3 Db(BLOCK_SIZE, BLOCK_SIZE);
+
+    //warm up
+    for(int i = 0; i < warm_up; ++i){
+        kr_gemm<<<Dg, Db>>>(m, n, k, d_a, lda, d_b, ldb, d_c, ldc, alpha, beta);    
+    }
+
+    for(int i = 0; i < iter_num; ++i){
+        t.start();
+        kr_gemm<<<Dg, Db>>>(m, n, k, d_a, lda, d_b, ldb, d_c, ldc, alpha, beta);
+        t.end();    
+    }
     
-    t.start();
-    kr_gemm<<<Dg, Db>>>(m, n, k, d_a, lda, d_b, ldb, d_c, ldc, alpha, beta);
-    t.end();
-    std::cout << "gpu elapsed time : " << t.elapsed() << " ms,  GFLOPS: " << gflops(2 * m * n * k, t.elapsed()) << std::endl;
-    
+    std::cout << "gpu elapsed time : " << t.getAverageTimeMs() << " ms,  GFLOPS: " << gflops(2 * m * n * k, t.getAverageTimeMs()) << std::endl;
+    time.emplace_back(t.getAverageTimeMs());
+
     cudaMemcpy(*_C_Dev_Host, d_c, size_c * sizeof(float), cudaMemcpyDeviceToHost);
 
     std::cout << "Gpu processed!" << std::endl;

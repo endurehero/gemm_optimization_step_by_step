@@ -1,5 +1,12 @@
 #include "impl/gpu/gemm_gpu.h"
 #ifdef USE_TENSOR_CORE
+#include<string>
+static std::string desc = "\
+GPU : TENSOR CORE IMPLEMENTATION\n\
+    1. Use wmma to implementation a raw version.\n\
+    2. Use raw cublas to be groudtruth.\n\
+    3. Use tensor core cublas to be groundtruth.\
+";
 
 #include<stdio.h>
 #include <mma.h>
@@ -81,8 +88,9 @@ __global__ void kr_gemm(int m, int n, int k, half* a, int lda, half*b, int ldb, 
 }
 
 
-void gemm_gpu(int m, int n, int k, float*a, int lda, float* b, int ldb, float* c, int ldc, float alpha, float beta, float** _C_Dev_Host){
+void gemm_gpu(int m, int n, int k, float*a, int lda, float* b, int ldb, float* c, int ldc, float alpha, float beta, float** _C_Dev_Host, std::vector<float>& time, int warm_up, int iter_num){
 
+    std::cout << desc << std::endl;
     
     Timer<NV> t_wmma;
 
@@ -131,12 +139,18 @@ void gemm_gpu(int m, int n, int k, float*a, int lda, float* b, int ldb, float* c
     grid_dim.x = (m + (WMMA_MACRO_M * block_dim.x / WARP_SIZE - 1)) / (WMMA_MACRO_M * block_dim.x / WARP_SIZE);
     grid_dim.y = (n + WMMA_MACRO_N * block_dim.y - 1) / (WMMA_MACRO_N * block_dim.y);
 
-
-    t_wmma.start();
-    kr_gemm<<<grid_dim, block_dim>>>(m, n, k, a_fp16, lda, b_fp16, ldb, c_wmma, ldc, alpha, beta);
-    t_wmma.end();
-
-    printf("wmma elapsed time: %f ms \n", t_wmma.elapsed());
+    // warm up
+    for(int i = 0; i < warm_up; ++i){
+        kr_gemm<<<grid_dim, block_dim>>>(m, n, k, a_fp16, lda, b_fp16, ldb, c_wmma, ldc, alpha, beta);    
+    }
+    
+    for(int i = 0; i < iter_num; ++i){
+        t_wmma.start();
+        kr_gemm<<<grid_dim, block_dim>>>(m, n, k, a_fp16, lda, b_fp16, ldb, c_wmma, ldc, alpha, beta);
+        t_wmma.end();    
+    }
+    printf("wmma elapsed time: %f ms \n", t_wmma.getAverageTimeMs());
+    time.emplace_back(t_wmma.getAverageTimeMs());
 
 
     //back to host
@@ -154,15 +168,29 @@ void gemm_gpu(int m, int n, int k, float*a, int lda, float* b, int ldb, float* c
     
     cublasHandle_t cublasHandle;
     cublasErrCheck(cublasCreate(&cublasHandle));
-    t_cublas.start();
-    cublasErrCheck(cublasGemmEx(cublasHandle, CUBLAS_OP_N, CUBLAS_OP_N, 
+    // warm up
+    for(int i = 0; i < warm_up; ++i){
+        cublasErrCheck(cublasGemmEx(cublasHandle, CUBLAS_OP_N, CUBLAS_OP_N, 
                                 m, n, k, &alpha, 
                                 a_fp32, CUDA_R_32F, lda,
                                 b_fp32, CUDA_R_32F, ldb, &beta,
                                 c_cublas, CUDA_R_32F, ldc,
-                                CUDA_R_32F, CUBLAS_GEMM_DEFAULT));
-    t_cublas.end();
-    printf("cublas elapsed time: %f ms \n", t_cublas.elapsed());
+                                CUDA_R_32F, CUBLAS_GEMM_DEFAULT));    
+    }
+
+    for(int i = 0; i < iter_num; ++i){
+        t_cublas.start();
+        cublasErrCheck(cublasGemmEx(cublasHandle, CUBLAS_OP_N, CUBLAS_OP_N, 
+                                    m, n, k, &alpha, 
+                                    a_fp32, CUDA_R_32F, lda,
+                                    b_fp32, CUDA_R_32F, ldb, &beta,
+                                    c_cublas, CUDA_R_32F, ldc,
+                                    CUDA_R_32F, CUBLAS_GEMM_DEFAULT));
+        t_cublas.end();    
+    }
+    
+    printf("cublas elapsed time: %f ms \n", t_cublas.getAverageTimeMs());
+    time.emplace_back(t_cublas.getAverageTimeMs());
     cudaErrCheck(cudaFree(c_cublas));
     free(c_host_cublas);
 
@@ -180,15 +208,31 @@ void gemm_gpu(int m, int n, int k, float*a, int lda, float* b, int ldb, float* c
     cublasHandle_t cublasTensorCoreHandler;
     cublasErrCheck(cublasCreate(&cublasTensorCoreHandler));
     cublasErrCheck(cublasSetMathMode(cublasTensorCoreHandler, CUBLAS_TENSOR_OP_MATH));
-    t_cublas_tensorcore.start();
-    cublasErrCheck(cublasGemmEx(cublasTensorCoreHandler, CUBLAS_OP_N, CUBLAS_OP_N, 
+
+    // warm up
+    for(int i = 0; i < warm_up; ++i){
+        cublasErrCheck(cublasGemmEx(cublasTensorCoreHandler, CUBLAS_OP_N, CUBLAS_OP_N, 
                                 m, n, k, &alpha, 
                                 a_fp16, CUDA_R_16F, lda,
                                 b_fp16, CUDA_R_16F, ldb, &beta,
                                 c_cublas_tensorcore, CUDA_R_32F, ldc,
                                 CUDA_R_32F, CUBLAS_GEMM_DFALT_TENSOR_OP));
-    t_cublas_tensorcore.end();
-    printf("cublas with tensor core elapsed time: %f ms \n", t_cublas_tensorcore.elapsed());
+    }
+
+
+    for(int i = 0; i < iter_num; ++i){
+        t_cublas_tensorcore.start();
+        cublasErrCheck(cublasGemmEx(cublasTensorCoreHandler, CUBLAS_OP_N, CUBLAS_OP_N, 
+                                    m, n, k, &alpha, 
+                                    a_fp16, CUDA_R_16F, lda,
+                                    b_fp16, CUDA_R_16F, ldb, &beta,
+                                    c_cublas_tensorcore, CUDA_R_32F, ldc,
+                                    CUDA_R_32F, CUBLAS_GEMM_DFALT_TENSOR_OP));
+        t_cublas_tensorcore.end();
+    }
+    
+    printf("cublas with tensor core elapsed time: %f ms \n", t_cublas_tensorcore.getAverageTimeMs());
+    time.emplace_back(t_cublas_tensorcore.getAverageTimeMs());
     cudaErrCheck(cudaFree(c_cublas_tensorcore));
     free(c_host_cublas_tensorcore);
     

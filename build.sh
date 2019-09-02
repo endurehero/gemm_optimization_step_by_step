@@ -10,7 +10,7 @@ rm -rf *
 cmake \
     -DENABLE_DEBUG=NO \
     -DBUILD_SHARED=YES \
-    -DUSE_CBLAS=NO \
+    -DUSE_CBLAS=YES \
     -DUSE_CPU_RAW=NO \
     -DUSE_CPU_OPT1=NO \
     -DUSE_CPU_OPT2=NO \
@@ -19,7 +19,7 @@ cmake \
     -DUSE_CPU_OPT5=NO \
     -DUSE_CPU_OPT6=NO \
     -DUSE_CPU_OPT7=NO \
-    -DUSE_CPU_OPT8=YES \
+    -DUSE_CPU_OPT8=NO \
     -DUSE_CPU_OPT9=NO \
     -DUSE_GPU=YES \
         -DUSE_CUBLAS=YES \
